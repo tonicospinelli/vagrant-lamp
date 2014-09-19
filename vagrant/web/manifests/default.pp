@@ -17,6 +17,11 @@ file { "/var/lock/apache2":
     owner => vagrant
 }
 
+file { "/var/www/${hostname}":
+   ensure => 'link',
+   target => "/vagrant",
+}
+
 exec { "ApacheUserChange" :
     command => "sed -i 's/export APACHE_RUN_USER=.*/export APACHE_RUN_USER=vagrant/ ; s/export APACHE_RUN_GROUP=.*/export APACHE_RUN_GROUP=vagrant/' /etc/apache2/envvars",
     require => [ Package["apache"], File["/var/lock/apache2"] ],
@@ -59,14 +64,14 @@ apache::module { 'rewrite': }
 apache::vhost { "${hostname}.dev":
     server_name => "${hostname}.dev",
     serveraliases => [ "www.${hostname}.dev", "${hostname}" ],
-    docroot => "/var/www/${hostname}/",
-    directory => "/var/www/${hostname}/",
+    docroot => "${public_directory}",
+    directory => "${public_directory}",
     directory_allow_override => 'All',
     directory_options => '-Indexes +FollowSymLinks',
     port => '80',
     env_variables => [
         'VAGRANT VAGRANT',
-        'APP_ENV dev',
+        'APP_ENV development',
     ],
     priority => '1',
 }
@@ -89,27 +94,6 @@ php::module { 'php-apc': }
 
 class { 'php::devel':
     require => Class['php'],
-}
-
-class { 'php::pear':
-    require => Class['php'],
-}
-
-php::pear::module { 'PHPUnit':
-    repository => 'pear.phpunit.de',
-    use_package => 'no',
-    require => Class['php::pear']
-}
-
-php::pecl::module { 'mongo':
-    use_package => "no",
-}
-
-file {'testfile':
-    path => '/tmp/testfile',
-    ensure => present,
-    mode => 0640,
-    content => "I'm a test file.",
 }
 
 class { 'composer':
@@ -167,19 +151,39 @@ mysql_grant { "root@33.33.33.1/*.*":
   require => Class['mysql::server'],
 }
 
-mysql_database{ "${hostname}":
+mysql_grant { "root@localhost/*.*":
+  ensure => 'present',
+  options => ['GRANT'],
+  privileges => ['ALL'],
+  table => '*.*',
+  user => "root@localhost",
+  require => Class['mysql::server'],
+}
+
+mysql_grant { "root@${ipaddress_eth1}/*.*":
+  ensure => 'present',
+  options => ['GRANT'],
+  privileges => ['ALL'],
+  table => '*.*',
+  user => "root@${ipaddress_eth1}",
+  require => Class['mysql::server'],
+}
+
+$dbname = regsubst($hostname, '-', '_', 'G')
+
+mysql_database{ "${dbname}":
   ensure => present,
   charset => 'utf8',
   require => Class['mysql::server'],
 }
 
-mysql_database{ "${hostname}_dev":
+mysql_database{ "${dbname}_dev":
   ensure => present,
   charset => 'utf8',
   require => Class['mysql::server'],
 }
 
-mysql_database{ "${hostname}_test":
+mysql_database{ "${dbname}_test":
   ensure => present,
   charset => 'utf8',
   require => Class['mysql::server'],
