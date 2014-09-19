@@ -20,6 +20,7 @@ file { "/var/lock/apache2":
 file { "/var/www/${hostname}":
    ensure => 'link',
    target => "/vagrant",
+   require => [ Package["apache"], File["/var/lock/apache2"] ],
 }
 
 exec { "ApacheUserChange" :
@@ -71,7 +72,37 @@ apache::vhost { "${hostname}.dev":
     port => '80',
     env_variables => [
         'VAGRANT VAGRANT',
-        'APP_ENV development',
+        'APP_ENV dev',
+    ],
+    priority => '1',
+}
+
+apache::vhost { "${hostname}.test":
+    server_name => "${hostname}.test",
+    serveraliases => [ "www.${hostname}.test", "${hostname}" ],
+    docroot => "${public_directory}",
+    directory => "${public_directory}",
+    directory_allow_override => 'All',
+    directory_options => '-Indexes +FollowSymLinks',
+    port => '80',
+    env_variables => [
+        'VAGRANT VAGRANT',
+        'APP_ENV test',
+    ],
+    priority => '1',
+}
+
+apache::vhost { "${hostname}.prod":
+    server_name => "${hostname}.prod",
+    serveraliases => [ "www.${hostname}.prod", "${hostname}" ],
+    docroot => "${public_directory}",
+    directory => "${public_directory}",
+    directory_allow_override => 'All',
+    directory_options => '-Indexes +FollowSymLinks',
+    port => '80',
+    env_variables => [
+        'VAGRANT VAGRANT',
+        'APP_ENV prod',
     ],
     priority => '1',
 }
