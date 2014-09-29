@@ -10,9 +10,6 @@ try{
 	$mysql_version = false;
 	$databases = array();
 }
-
-
-
 ?>
 <!doctype html>
 <html lang="en">
